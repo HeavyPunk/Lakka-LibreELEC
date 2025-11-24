@@ -387,6 +387,13 @@ devices = \
         'rockchip_legacy_boot': '1'
       },
     },
+    'RK3566': {
+      'radxa-zero-3': {
+        'config': 'radxa-zero-3-rk3566_defconfig',
+        'dtb': '',
+        'soc': 'RK3566'
+      },
+    }
   },
   'Samsung': {
     'Exynos': {
