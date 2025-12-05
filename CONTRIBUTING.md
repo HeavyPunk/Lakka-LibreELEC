@@ -18,7 +18,8 @@ Team members: kivutar, Ntemis, gouchi, ToKe79, RobLoach, natinusala, plaidman
 
 Development happens on the branch `devel`. This branch follows LibreELEC.tv `master`.
 
-We consider this branch as a rolling release, and we ensure that:
+**It is also important to provide logs for debugging.
+A zip file can be found in the [logfiles] samba share, this will contain all the logs needed.**
 
  * All the projects build fine at least on Ubuntu LTS
  * All the projects boot

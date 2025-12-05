@@ -2,8 +2,8 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="rpi-eeprom"
-PKG_VERSION="f45ed2371426add9a315809aeeaa6dc5c5694c6e"
-PKG_SHA256="943bd6384dd2437310741466fa2d22ba9b3e89de100ec9fa593896981281b4ac"
+PKG_VERSION="c6a755543ee058d9487ce3c495de5da0675fd7a3"
+PKG_SHA256="d10320eafc4818ea629364e781abdb7659257b016adcc15621ec6cce11764bd3"
 PKG_LICENSE="BSD-3/custom"
 PKG_SITE="https://github.com/raspberrypi/rpi-eeprom"
 PKG_URL="https://github.com/raspberrypi/rpi-eeprom/archive/${PKG_VERSION}.tar.gz"
@@ -12,7 +12,7 @@ PKG_LONGDESC="rpi-eeprom: firmware, config and scripts to update RPi4 SPI bootlo
 PKG_TOOLCHAIN="manual"
 
 makeinstall_target() {
-  
+
   if [ "${DEVICE}" = "RPi4" ]; then
     _variant="2711"
   else

@@ -85,9 +85,6 @@
   # e.g. FIRMWARE="dvb-firmware misc-firmware wlan-firmware"
     FIRMWARE="misc-firmware wlan-firmware firmware-dragonboard"
 
-  # build and install driver addons (yes / no)
-    DRIVER_ADDONS_SUPPORT="no"
-
   # build with installer (yes / no)
     INSTALLER_SUPPORT="no"
 

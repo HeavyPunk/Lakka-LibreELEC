@@ -10,4 +10,4 @@ PKG_URL="https://gitlab.freedesktop.org/libevdev/evtest/-/archive/${PKG_NAME}-${
 PKG_DEPENDS_TARGET="toolchain libxml2"
 PKG_LONGDESC="A simple tool for input event debugging."
 PKG_TOOLCHAIN="autotools"
-PKG_BUILD_FLAGS="-sysroot"
+PKG_BUILD_FLAGS="-sysroot -cfg-libs"

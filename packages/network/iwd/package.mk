@@ -7,7 +7,7 @@ PKG_SHA256="640bff22540e1714f71772a83123aff6f810b7eb9d7d6df1e10fb2695beb5115"
 PKG_LICENSE="GPL"
 PKG_SITE="https://git.kernel.org/cgit/network/wireless/iwd.git/about/"
 PKG_URL="https://www.kernel.org/pub/linux/network/wireless/iwd-${PKG_VERSION}.tar.xz"
-PKG_DEPENDS_TARGET="toolchain readline dbus"
+PKG_DEPENDS_TARGET="autotools:host gcc:host readline dbus"
 PKG_LONGDESC="Wireless daemon for Linux"
 PKG_TOOLCHAIN="autotools"
 
@@ -39,4 +39,3 @@ post_makeinstall_target() {
 post_install() {
   enable_service iwd.service
 }
-

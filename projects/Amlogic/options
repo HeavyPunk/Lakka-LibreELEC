@@ -66,13 +66,6 @@
   # e.g. ADDITIONAL_DRIVERS+=" DRIVER1 DRIVER2"
     ADDITIONAL_DRIVERS+=""
 
-  # build and install driver addons (yes / no)
-    DRIVER_ADDONS_SUPPORT="no"
-
-    if [ "${DISTRO}" = "Lakka" ]; then
-      DRIVER_ADDONS_SUPPORT="no"
-    fi
-
   # additional packages to install:
     ADDITIONAL_PACKAGES+=" dtc ethmactool emmctool flashrom pciutils tm16xx"
 
@@ -81,3 +74,6 @@
 
   # debug tty path
     DEBUG_TTY="/dev/ttyAML0"
+
+  # vfd pannel display support
+    VFD_SUPPORT="yes"

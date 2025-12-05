@@ -10,7 +10,7 @@ PKG_URL="https://github.com/cjd/mtpfs/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain fuse glib libmtp"
 PKG_LONGDESC="MTPfs is a FUSE filesystem that supports reading and writing from any MTP device."
 PKG_TOOLCHAIN="autotools"
-PKG_BUILD_FLAGS="-sysroot"
+PKG_BUILD_FLAGS="-sysroot -cfg-libs"
 
 PKG_CONFIGURE_OPTS_TARGET="--disable-mad"
 

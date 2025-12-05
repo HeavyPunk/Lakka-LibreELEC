@@ -16,49 +16,36 @@ PKG_PATCH_DIRS="${LINUX}"
 
 case "${LINUX}" in
   amlogic)
-    PKG_VERSION="86731a2a651e58953fc949573895f2fa6d456841" # 6.16-rc3
-    PKG_SHA256="008b00968a8bfc0627580b82a2d30c7304336a4f92a58e80cdbc2d4723e01840"
+    PKG_VERSION="6c7871823908a4330e145d635371582f76ce1407" # 6.17.4
+    PKG_SHA256="6a5561e8e0c315e4a8b2e873934ae219e3ca4208f49daf1ad17db84735931c2d"
     PKG_URL="https://github.com/torvalds/linux/archive/${PKG_VERSION}.tar.gz"
     PKG_SOURCE_NAME="linux-${LINUX}-${PKG_VERSION}.tar.gz"
     PKG_PATCH_DIRS="default rtlwifi/6.17"
     ;;
   raspberrypi)
-    PKG_VERSION="359f37f0faefb712add32a39f98751aea67d5c1f" # 6.12.47
-    PKG_SHA256="85c882310e7c74657855b25bba700b5a856327a31547fe49f5758951984c92d9"
+    PKG_VERSION="954129f16c200e41a00ebebe2e22efc01b243538" # 6.12.58
+    PKG_SHA256="e1b39f094f1f68b9070711b39928ebd996bf8139b7238767bbba2948aba90003"
     PKG_URL="https://github.com/raspberrypi/linux/archive/${PKG_VERSION}.tar.gz"
     PKG_SOURCE_NAME="linux-${LINUX}-${PKG_VERSION}.tar.gz"
-    PKG_PATCH_DIRS="raspberrypi rtlwifi/6.13 rtlwifi/6.14 rtlwifi/6.15 rtlwifi/6.17"
+    PKG_PATCH_DIRS="raspberrypi rtlwifi/6.13 rtlwifi/6.14 rtlwifi/6.15 rtlwifi/6.18"
     ;;
-  L4T)
-    if [ -z "${L4T_KERNEL_VERSION}" ]; then
-      echo -n "${DEVICE:-${PROJECT}}: ${KERNEL} - you must set L4T_KERNEL_VERSION in projects/${PROJECT}/"
-        if [ -z "${DEVICE}" ]; then
-          echo "options"
-        else
-          echo "device/${DEVICE}/options"
-        fi
-      exit 1
-    fi
-    PKG_VERSION=${DEVICE:-${PROJECT}}-${L4T_KERNEL_VERSION}
-    PKG_URL="l4t-kernel-sources"
-    GET_HANDLER_SUPPORT="l4t-kernel-sources"
-    PKG_PATCH_DIRS="${PROJECT} ${PROJECT}/${DEVICE}"
-    PKG_SOURCE_NAME="${PKG_NAME}-${PKG_VERSION}.tar.gz"
-    #Need to find a better way to do this for l4t platforms!
-    PKG_SHA256=${L4T_COMBINED_KERNEL_SHA256}
-    ;;
-  ayn-odin)
-    PKG_SHA256="9aa25bf492928bc7a4542e87d28919c9ac36d27c"
-    PKG_VERSION="${PKG_SHA256}"
-    PKG_URL="https://gitlab.com/sdm845-mainline/linux.git"
-    PKG_PATCH_DIRS="ayn-odin"
-    PKG_GIT_CLONE_BRANCH="sdm845-5.19.16"
+  rockchip)
+    PKG_VERSION="e5f0a698b34ed76002dc5cff3804a61c80233a7a" # 6.17.0
+    PKG_SHA256="78282d8f57cb0efef15cd8f3e9838615f2ffc8a913f5b5a90321eb6669dfd568"
+    PKG_URL="https://github.com/chewitt/linux/archive/${PKG_VERSION}.tar.gz"
+    PKG_SOURCE_NAME="linux-${LINUX}-${PKG_VERSION}.tar.gz"
+    PKG_PATCH_DIRS="default rockchip rtlwifi/6.18"
     ;;
   *)
-    PKG_VERSION="6.16.9"
-    PKG_SHA256="7ac8c8a3cf05476375deaaa85dfcee095a826ffe557b437f43774fc3b64ce58d"
+    PKG_VERSION="6.17.8"
+    PKG_SHA256="5a8de64a75fca706c01c6c0a77cf75a74618439db195e25f1f0268af6b2fb1da"
     PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
-    PKG_PATCH_DIRS="default rtlwifi/6.17"
+    PKG_PATCH_DIRS="default"
+    case ${DEVICE} in
+      RK3288|RK3328|RK3399)
+        PKG_PATCH_DIRS+=" rockchip-old"
+        ;;
+    esac
     ;;
 esac
 
@@ -131,7 +118,8 @@ makeinstall_host() {
 }
 
 pre_make_target() {
-  ( cd ${ROOT}
+  (
+    cd ${ROOT}
     rm -rf ${BUILD}/initramfs
     rm -f ${STAMPS_INSTALL}/initramfs/install_target ${STAMPS_INSTALL}/*/install_init
     ${SCRIPTS}/install initramfs
@@ -160,124 +148,33 @@ pre_make_target() {
     ${PKG_BUILD}/scripts/config --disable CONFIG_CIFS
   fi
 
-  # enable/disable iscsi support
-  [ "${ISCSI_SUPPORT}" = yes ] && OPTION="--enable" || OPTION="--disable"
-  ${PKG_BUILD}/scripts/config ${OPTION} CONFIG_SCSI_ISCSI_ATTRS
-  ${PKG_BUILD}/scripts/config ${OPTION} CONFIG_ISCSI_TCP
-  ${PKG_BUILD}/scripts/config ${OPTION} CONFIG_ISCSI_BOOT_SYSFS
-  ${PKG_BUILD}/scripts/config ${OPTION} CONFIG_ISCSI_IBFT_FIND
-  ${PKG_BUILD}/scripts/config ${OPTION} CONFIG_ISCSI_IBFT
-
   # disable wireguard support if not enabled
   if [ ! "${WIREGUARD_SUPPORT}" = yes ]; then
     ${PKG_BUILD}/scripts/config --disable CONFIG_WIREGUARD
   fi
 
-  # enable nouveau driver when required
-  if [ ! "${LINUX}" = "L4T" ]; then
-    if listcontains "${GRAPHIC_DRIVERS}" "nouveau"; then
-      ${PKG_BUILD}/scripts/config --module CONFIG_DRM_NOUVEAU
-      ${PKG_BUILD}/scripts/config --enable CONFIG_DRM_NOUVEAU_BACKLIGHT
-      ${PKG_BUILD}/scripts/config --set-val CONFIG_NOUVEAU_DEBUG 5
-      ${PKG_BUILD}/scripts/config --set-val CONFIG_NOUVEAU_DEBUG_DEFAULT 3
-    fi
+  # disable vfd support if not enabled
+  if [ ! "${VFD_SUPPORT}" = yes ]; then
+    ${PKG_BUILD}/scripts/config --disable CONFIG_PANEL_CHANGE_MESSAGE
+  else
+    # enable the module and set distro boot message
+    ${PKG_BUILD}/scripts/config --enable CONFIG_AUXDISPLAY
+    ${PKG_BUILD}/scripts/config --enable CONFIG_LINEDISPLAY
+    ${PKG_BUILD}/scripts/config --enable CONFIG_TM16XX
+    ${PKG_BUILD}/scripts/config --enable CONFIG_TM16XX_KEYPAD
+    ${PKG_BUILD}/scripts/config --enable CONFIG_TM16XX_I2C
+    ${PKG_BUILD}/scripts/config --enable CONFIG_TM16XX_SPI
+    ${PKG_BUILD}/scripts/config --enable CONFIG_PANEL_CHANGE_MESSAGE
+    ${PKG_BUILD}/scripts/config --set-str CONFIG_PANEL_BOOT_MESSAGE "${VFD_MESSAGE}"
+    ${PKG_BUILD}/scripts/config --enable CONFIG_INPUT_MATRIXKMAP
+    # enable led activity triggers
+    ${PKG_BUILD}/scripts/config --enable CONFIG_LEDS_TRIGGER_TIMER # Colon
+    ${PKG_BUILD}/scripts/config --enable CONFIG_LEDS_TRIGGER_NETDEV # LAN/WLAN
+    ${PKG_BUILD}/scripts/config --enable CONFIG_USB_LEDS_TRIGGER_USBPORT # USB
+    ${PKG_BUILD}/scripts/config --enable CONFIG_MMC # SD
   fi
 
-  # enable MIDI for Lakka on x86_64, i386 has options set in linux config file
-  if [ "${DISTRO}" = "Lakka" -a "${TARGET_ARCH}" = "x86_64" ]; then
-    ${PKG_BUILD}/scripts/config \
-                                --module CONFIG_SND_SEQ_DEVICE \
-                                --module CONFIG_SND_SEQUENCER \
-                                --enable CONFIG_SND_SEQ_HRTIMER_DEFAULT \
-                                --module CONFIG_SND_SEQ_MIDI_EVENT \
-                                --module CONFIG_SND_SEQ_MIDI \
-                                --module CONFIG_SND_SEQ_MIDI_EMUL \
-                                --module CONFIG_SND_SEQ_VIRMIDI \
-                                --module CONFIG_SND_OPL3_LIB_SEQ \
-                                --module CONFIG_SND_EMU10K1_SEQ \
-                                --module CONFIG_SND_SYNTH_EMUX
-  fi
-
-  # enable Gamecon for Lakka on x86_64, i386 has options set in linux config file
-  if [ "${DISTRO}" = "Lakka" -a "${TARGET_ARCH}" = "x86_64" ]; then
-    ${PKG_BUILD}/scripts/config \
-                                --module CONFIG_JOYSTICK_GAMECON \
-                                --module CONFIG_PARPORT \
-                                --module CONFIG_PARPORT_PC \
-                                --module CONFIG_PARPORT_SERIAL \
-                                --enable CONFIG_PARPORT_PC_FIFO \
-                                --enable CONFIG_PARPORT_PC_SUPERIO \
-                                --module CONFIG_PARPORT_AX88796 \
-                                --enable CONFIG_PARPORT_1284 \
-                                --enable CONFIG_PARPORT_NOT_PC
-  fi
-
-  # enable Ventoy support
-  if [ "${DISTRO}" = "Lakka" -a "${PROJECT}" = "Generic" ]; then
-    ${PKG_BUILD}/scripts/config \
-                                --enable CONFIG_BLK_DEV_DM
-  fi
-
-  # enable Dualsense on default and raspberrypi kernels for Lakka
-  if [ "${DISTRO}" = "Lakka" ] && [ "${LINUX}" = "default" -o "${LINUX}" = "raspberrypi" ]; then
-    ${PKG_BUILD}/scripts/config \
-                                --enable CONFIG_HID_PLAYSTATION \
-                                --enable CONFIG_PLAYSTATION_FF
-  fi
-
-  # enable additional USB / WIFI for CM4 / RetroDreamer / PiBoyDMG
-  if [ "${DISTRO}" = "Lakka" ] && [ "${DEVICE:0:4}" = "RPi4" ]; then
-    ${PKG_BUILD}/scripts/config --module CONFIG_USB_DWC2
-    ${PKG_BUILD}/scripts/config --module CONFIG_R8188EU
-  fi
-
-  # enable joystick and eMMC support for Exynos / OdroidXU4
-  if [ "${DISTRO}" = "Lakka" ] && [ "${DEVICE}" = "Exynos" ]; then
-    ${PKG_BUILD}/scripts/config --enable CONFIG_INPUT_JOYSTICK \
-                                --module CONFIG_JOYSTICK_GF2K \
-                                --module CONFIG_JOYSTICK_IFORCE \
-                                --module CONFIG_JOYSTICK_IFORCE_USB \
-                                --module CONFIG_JOYSTICK_XPAD \
-                                --enable CONFIG_JOYSTICK_XPAD_FF \
-                                --enable CONFIG_JOYSTICK_XPAD_LEDS \
-                                --enable CONFIG_INPUT_MISC \
-                                --module CONFIG_PWRSEQ_SD8787 \
-                                --module CONFIG_SDIO_UART \
-                                --module CONFIG_ARM_AMBA \
-                                --module CONFIG_ARMMMCI \
-                                --module CONFIG_MMC_ARMMMCI \
-                                --module MMC_SDHCI_PLTFM \
-                                --enable CONFIG_MMC_STM32_SDMMC \
-                                --enable CONFIG_MMC_SDHCI_IO_ACCESSORS \
-                                --module CONFIG_MMC_SDHCI_OF_ARASAN \
-                                --module CONFIG_MMC_SDHCI_OF_ASPEED \
-                                --module CONFIG_MMC_SDHCI_OF_AT91 \
-                                --module CONFIG_MMC_SDHCI_OF_DWCMSHC \
-                                --module CONFIG_MMC_SDHCI_CADENCE \
-                                --module CONFIG_MMC_SPI \
-                                --module CONFIG_MMC_VUB300 \
-                                --module CONFIG_MMC_USHC \
-                                --module CONFIG_MMC_USDHI6ROL0 \
-                                --module CONFIG_MMC_REALTEK_USB \
-                                --module CONFIG_MMC_CQHCI \
-                                --module CONFIG_MMC_MTK \
-                                --module CONFIG_MMC_SDHCI_XENON \
-                                --module CONFIG_MMC_SDHCI_OMAP \
-                                --module CONFIG_MMC_SDHCI_AM654 \
-                                --module CONFIG_MEMSTICK \
-                                --module CONFIG_MSPRO_BLOCK \
-                                --module CONFIG_MS_BLOCK \
-                                --module CONFIG_MEMSTICK_REALTEK_USB
-  fi
-
-  # install extra dts files for Lakka
-  if [ "${DISTRO}" = "Lakka" ]; then
-    for f in ${PROJECT_DIR}/${PROJECT}/config/*-overlay.dts ${PROJECT_DIR}/${PROJECT}/devices/${DEVICE}/config/*-overlay.dts ; do
-      [ -f "${f}" ] && cp -v ${f} ${PKG_BUILD}/arch/${TARGET_KERNEL_ARCH}/boot/dts/overlays || true
-    done
-  fi
-
-  if [ "${TARGET_ARCH}" = "x86_64" -o "${TARGET_ARCH}" = "i386" ]; then
+  if [ "${TARGET_ARCH}" = "x86_64" ]; then
     # copy some extra firmware to linux tree
     mkdir -p ${PKG_BUILD}/external-firmware
       cp -a $(get_build_dir kernel-firmware)/.copied-firmware/{amdgpu,amd-ucode,i915,radeon,e100,rtl_nic} ${PKG_BUILD}/external-firmware
@@ -347,14 +244,8 @@ pre_make_target() {
     kernel_make prepare
     kernel_make modules_prepare
   else
-    kernel_make listnewconfig
-    if [ "${INTERACTIVE_CONFIG}" = "yes" ]; then
-      # manually answer .config changes
-      kernel_make oldconfig
-    else
-      # accept default answers for .config changes
-      yes "" | kernel_make oldconfig > /dev/null
-    fi
+    # accept default answers for .config changes
+    yes "" | kernel_make oldconfig >/dev/null
   fi
 
   if [ -f "${DISTRO_DIR}/${DISTRO}/kernel_options" ]; then
@@ -368,7 +259,7 @@ pre_make_target() {
       if [ "$(${PKG_BUILD}/scripts/config --state ${OPTION%%=*})" != "$(echo ${OPTION##*=} | tr -d '"')" ]; then
         MISSING_KERNEL_OPTIONS+="\t${OPTION}\n"
       fi
-    done < ${DISTRO_DIR}/${DISTRO}/kernel_options
+    done <${DISTRO_DIR}/${DISTRO}/kernel_options
 
     if [ -n "${MISSING_KERNEL_OPTIONS}" ]; then
       print_color CLR_WARNING "LINUX: kernel options not correct: \n${MISSING_KERNEL_OPTIONS%%}\nPlease run ./tools/check_kernel_config\n"
@@ -393,9 +284,9 @@ make_target() {
 
   DTC_FLAGS=-@ kernel_make ${KERNEL_TARGET} ${KERNEL_MAKE_EXTRACMD} modules
 
-  if [ ! "${LINUX}" = "L4T" ]; then
-    if [ "${PKG_BUILD_PERF}" = "yes" ]; then
-      ( cd tools/perf
+  if [ "${PKG_BUILD_PERF}" = "yes" ]; then
+    (
+      cd tools/perf
 
         # arch specific perf build args
         case "${TARGET_ARCH}" in
@@ -410,51 +301,27 @@ make_target() {
             ;;
         esac
 
-      if [ "${LINUX}" = "ayn-odin" ]; then
-        # Removed "BUILD_BPF_SKEL=0" from make parameters.
-        WERROR=0 \
-        NO_LIBPERL=1 \
-        NO_LIBPYTHON=1 \
-        NO_SLANG=1 \
-        NO_GTK2=1 \
-        NO_LIBNUMA=1 \
-        NO_LIBAUDIT=1 \
-        NO_LIBTRACEEVENT=1 \
-        NO_LZMA=1 \
-        NO_SDT=1 \
-        NO_LIBDEBUGINFOD=1 \
-        NO_JVMTI=1 \
-        NO_LIBLLVM=1 \
-        NO_LIBPFM4=1 \
-        NO_LIBBABELTRACE=1 \
-        NO_CAPSTONE=1 \
-        NO_LIBPFM4=1 \
-        CROSS_COMPILE="${TARGET_PREFIX}" \
-        JOBS="${CONCURRENCY_MAKE_LEVEL}" \
-          make ${PERF_BUILD_ARGS}
-      else
-        WERROR=0 \
-        NO_LIBPERL=1 \
-        NO_LIBPYTHON=1 \
-        NO_SLANG=1 \
-        NO_GTK2=1 \
-        NO_LIBNUMA=1 \
-        NO_LIBAUDIT=1 \
-        NO_LIBTRACEEVENT=1 \
-        NO_LZMA=1 \
-        NO_SDT=1 \
-        NO_LIBDEBUGINFOD=1 \
-        NO_JVMTI=1 \
-        NO_LIBLLVM=1 \
-        NO_LIBPFM4=1 \
-        NO_LIBBABELTRACE=1 \
-        NO_CAPSTONE=1 \
-        NO_LIBPFM4=1 \
-        BUILD_BPF_SKEL=0 \
-        CROSS_COMPILE="${TARGET_PREFIX}" \
-        JOBS="${CONCURRENCY_MAKE_LEVEL}" \
-          make ${PERF_BUILD_ARGS}
-      fi
+      WERROR=0 \
+      NO_LIBPERL=1 \
+      NO_LIBPYTHON=1 \
+      NO_SLANG=1 \
+      NO_GTK2=1 \
+      NO_LIBNUMA=1 \
+      NO_LIBAUDIT=1 \
+      NO_LIBTRACEEVENT=1 \
+      NO_LZMA=1 \
+      NO_SDT=1 \
+      NO_LIBDEBUGINFOD=1 \
+      NO_JVMTI=1 \
+      NO_LIBLLVM=1 \
+      NO_LIBPFM4=1 \
+      NO_LIBBABELTRACE=1 \
+      NO_CAPSTONE=1 \
+      NO_LIBPFM4=1 \
+      BUILD_BPF_SKEL=0 \
+      CROSS_COMPILE="${TARGET_PREFIX}" \
+      JOBS="${CONCURRENCY_MAKE_LEVEL}" \
+        make ${PERF_BUILD_ARGS}
       mkdir -p ${INSTALL}/usr/bin
         cp perf ${INSTALL}/usr/bin
     )
@@ -470,9 +337,9 @@ make_target() {
     if [ "${KERNEL_UIMAGE_COMP}" != "none" ]; then
       COMPRESSED_SIZE=$(stat -t "arch/${TARGET_KERNEL_ARCH}/boot/${KERNEL_TARGET}" | awk '{print $2}')
       # align to 1 MiB
-      COMPRESSED_SIZE=$(( ((${COMPRESSED_SIZE} - 1 >> 20) + 1) << 20 ))
-      PKG_KERNEL_UIMAGE_LOADADDR=$(printf '%X' "$(( ${KERNEL_UIMAGE_LOADADDR} + ${COMPRESSED_SIZE} ))")
-      PKG_KERNEL_UIMAGE_ENTRYADDR=$(printf '%X' "$(( ${KERNEL_UIMAGE_ENTRYADDR} + ${COMPRESSED_SIZE} ))")
+      COMPRESSED_SIZE=$((((${COMPRESSED_SIZE} - 1 >> 20) + 1) << 20))
+      PKG_KERNEL_UIMAGE_LOADADDR=$(printf '%X' "$((${KERNEL_UIMAGE_LOADADDR} + ${COMPRESSED_SIZE}))")
+      PKG_KERNEL_UIMAGE_ENTRYADDR=$(printf '%X' "$((${KERNEL_UIMAGE_ENTRYADDR} + ${COMPRESSED_SIZE}))")
     else
       PKG_KERNEL_UIMAGE_LOADADDR=${KERNEL_UIMAGE_LOADADDR}
       PKG_KERNEL_UIMAGE_ENTRYADDR=${KERNEL_UIMAGE_ENTRYADDR}

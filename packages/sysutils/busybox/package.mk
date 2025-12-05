@@ -3,15 +3,15 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="busybox"
-PKG_VERSION="1.36.1"
-PKG_SHA256="b8cc24c9574d809e7279c3be349795c5d5ceb6fdf19ca709f80cde50e47de314"
+PKG_VERSION="1.37.0"
+PKG_SHA256="3311dff32e746499f4df0d5df04d7eb396382d7e108bb9250e7b519b837043a4"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.busybox.net"
 PKG_URL="https://busybox.net/downloads/${PKG_NAME}-${PKG_VERSION}.tar.bz2"
 PKG_DEPENDS_TARGET="toolchain hdparm dosfstools e2fsprogs zip usbutils parted procps-ng libtirpc"
 PKG_DEPENDS_INIT="toolchain libtirpc"
 PKG_LONGDESC="BusyBox combines tiny versions of many common UNIX utilities into a single small executable."
-PKG_BUILD_FLAGS="-parallel"
+PKG_BUILD_FLAGS="-parallel +lto"
 
 # nano text editor
 if [ "${NANO_EDITOR}" = "yes" ]; then
@@ -120,7 +120,7 @@ makeinstall_target() {
     cp ${PKG_DIR}/scripts/apt-get ${INSTALL}/usr/bin/
     cp ${PKG_DIR}/scripts/sudo ${INSTALL}/usr/bin/
     cp ${PKG_DIR}/scripts/pastebinit ${INSTALL}/usr/bin/
-      sed -e "s/@DISTRONAME@-@OS_VERSION@/${DISTRONAME}-$OS_VERSION/g" \
+      sed -e "s/@DISTRONAME@-@OS_VERSION@/${DISTRONAME}-${OS_VERSION}/g" \
           -i ${INSTALL}/usr/bin/pastebinit
       ln -sf pastebinit ${INSTALL}/usr/bin/paste
 
@@ -159,8 +159,8 @@ makeinstall_target() {
 }
 
 post_install() {
-  echo "chmod 4755 ${INSTALL}/usr/bin/busybox" >> ${FAKEROOT_SCRIPT}
-  echo "chmod 000 ${INSTALL}/usr/cache/shadow" >> ${FAKEROOT_SCRIPT}
+  echo "chmod 4755 ${INSTALL}/usr/bin/busybox" >>${FAKEROOT_SCRIPT}
+  echo "chmod 000 ${INSTALL}/usr/cache/shadow" >>${FAKEROOT_SCRIPT}
 
   add_user root "${ROOT_PASSWORD}" 0 0 "Root User" "/storage" "/bin/sh"
   add_group root 0

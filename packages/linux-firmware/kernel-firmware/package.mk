@@ -2,8 +2,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="kernel-firmware"
-PKG_VERSION="20250509"
-PKG_SHA256="f2c60d66f226a28130cb5643e6e544d3229673460e127c91ba03f1080cbd703e"
+PKG_VERSION="20251125"
+PKG_SHA256="eb807a01c52882ac97ef5b678d4a246b209e6165ac1287d62a5f93a09ee93cd2"
 PKG_LICENSE="other"
 PKG_SITE="https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/"
 PKG_URL="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-${PKG_VERSION}.tar.xz"
@@ -61,15 +61,15 @@ makeinstall_target() {
           echo "ERROR: Firmware file ${fwfile} does not exist - aborting"
           exit 1
         fi
-      done <<< "$(cd ${PKG_FW_SOURCE} && eval "find "${fwline}"")"
-    done < "${fwlist}"
+      done <<<"$(cd ${PKG_FW_SOURCE} && eval "find "${fwline}"")"
+    done <"${fwlist}"
   done
 
   PKG_KERNEL_CFG_FILE=$(kernel_config_path) || die
 
   # The following files are RPi specific and installed by brcmfmac_sdio-firmware-rpi instead.
   # They are also not required at all if the kernel is not suitably configured.
-  if listcontains "${FIRMWARE}" "brcmfmac_sdio-firmware-rpi" || \
+  if listcontains "${FIRMWARE}" "brcmfmac_sdio-firmware-rpi" ||
      ! grep -q "^CONFIG_BRCMFMAC_SDIO=y" ${PKG_KERNEL_CFG_FILE}; then
     rm -fr ${FW_TARGET_DIR}/brcm/brcmfmac43430*-sdio.*
     rm -fr ${FW_TARGET_DIR}/brcm/brcmfmac43455*-sdio.*
@@ -77,16 +77,7 @@ makeinstall_target() {
 
   # brcm pcie firmware is only needed by x86_64
   [ "${TARGET_ARCH}" != "x86_64" ] && rm -fr ${FW_TARGET_DIR}/brcm/*-pcie.*
-  # add nvidia firmware for nouveau
-  if listcontains "${GRAPHIC_DRIVERS}" "nouveau"; then
-    cp -Lrv ${PKG_FW_SOURCE}/nvidia ${FW_TARGET_DIR}/
-    rm -rv ${FW_TARGET_DIR}/nvidia/tegra*
-  fi
 
-  # On Lakka use iwlwifi firmware from this package instead of separate LibreELEC package
-  if [ "${DISTRO}" = "Lakka" -a "${PROJECT}" = "Generic" ]; then
-    cp -Lv ${PKG_FW_SOURCE}/iwlwifi-* ${FW_TARGET_DIR}/
-  fi
   # Cleanup - which may be project or device specific
   find_file_path scripts/cleanup.sh && ${FOUND_PATH} ${FW_TARGET_DIR} || true
 }
